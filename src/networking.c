@@ -1163,7 +1163,7 @@ int processInlineBuffer(client *c) {
     size_t querylen;
 
     /* Search for end of line */
-    newline = strchr(c->querybuf+c->qb_pos,'\n');
+    newline = strchr(c->querybuf + c->qb_pos,'\n');
 
     /* Nothing to do without a \r\n */
     if (newline == NULL) {

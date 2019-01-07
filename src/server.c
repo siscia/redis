@@ -2015,7 +2015,10 @@ void initServer(void) {
 
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
+
+#ifndef FUZZ
     setupSignalHandlers();
+#endif
 
     if (server.syslog_enabled) {
         openlog(server.syslog_ident, LOG_PID | LOG_NDELAY | LOG_NOWAIT,
@@ -2066,12 +2069,13 @@ void initServer(void) {
         }
         anetNonBlock(NULL,server.sofd);
     }
-
+#ifndef FUZZ
     /* Abort if there are no listening sockets at all. */
     if (server.ipfd_count == 0 && server.sofd < 0) {
         serverLog(LL_WARNING, "Configured to not listen anywhere, exiting.");
         exit(1);
     }
+#endif
 
     /* Create the Redis databases, and initialize other internal state. */
     for (j = 0; j < server.dbnum; j++) {
@@ -3999,7 +4003,46 @@ int redisIsSupervised(int mode) {
     return 0;
 }
 
+#ifdef FUZZ
+static bool AlreadyInit = false;
+static int loops = 0;
 
+void Init() {
+  if (!AlreadyInit) {
+    initServerConfig();
+    server.port = 0;
+    server.unixsocket = NULL;
+    initServer();
+    AlreadyInit = true;
+  }
+}
+
+int LLVMFuzzerTestOneInput(const char *Data, size_t Size) {
+  Init();
+
+  for(size_t i = 0; i <= Size; i++) {
+    if (!( isascii(Data[i]) || isspace(Data[i]) ))
+      return 0;
+  }
+
+  /*
+  //printf("Data :> %s\n", Data);
+  printf("Loop: %d\nData: %s\n", ++loops, Data);
+  int n = 0;
+  sds* arr = sdssplitargs(Data, &n);
+  //printf("Len:> %d\n", n);
+  for (int i = 0; i < n; i++)
+    printf("Array Len:> %zu\n", sdslen(arr[i]));
+  sdsfreesplitres(arr, n);
+        */
+  client* c = createClient(-1);
+  sdscpylen(c->querybuf, Data, Size);
+  processInputBuffer(c);
+  freeClient(c);
+
+  return 0;  // Non-zero return values are reserved for future use.
+}
+#else
 int main(int argc, char **argv) {
     struct timeval tv;
     int j;
@@ -4198,5 +4241,6 @@ int main(int argc, char **argv) {
     aeDeleteEventLoop(server.el);
     return 0;
 }
+#endif
 
 /* The End */
