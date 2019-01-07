@@ -956,7 +956,8 @@ sds *sdssplitargs(const char *line, int *argc) {
     *argc = 0;
     while(1) {
         /* skip blanks */
-        while(*p && isspace(*p)) p++;
+        while(*p && isspace(*p)) 
+                p++;
         if (*p) {
             /* get a token */
             int inq=0;  /* set to 1 if we are in "quotes" */
@@ -1035,7 +1036,8 @@ sds *sdssplitargs(const char *line, int *argc) {
                         break;
                     }
                 }
-                if (*p) p++;
+                if (*p) 
+                        p++;
             }
             /* add the token to the vector */
             vector = s_realloc(vector,((*argc)+1)*sizeof(char*));
@@ -1238,6 +1240,15 @@ int sdsTest(void) {
         y = sdsnew("bar");
         test_cond("sdscmp(bar,bar)", sdscmp(x,y) < 0)
 
+        char *buffer = "J\n";
+        sds aux = sdsnewlen(buffer, 1);
+        int argc = 0;
+        //sds *argv = sdssplitargs(aux, &argc);
+        //sdsfreesplitres(argv, argc);
+        sdsfree(aux);
+        //test_cond("sdssplitargs(;LT)", argc == 1)
+        test_cond("sdscmp()", sdscmp(sdsnewlen(buffer, 1), sdsnewlen("J\n", 1)) == 0)
+        
         sdsfree(y);
         sdsfree(x);
         x = sdsnewlen("\a\n\0foo\r",7);

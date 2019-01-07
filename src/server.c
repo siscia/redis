@@ -2000,7 +2000,10 @@ void initServer(void) {
 
     signal(SIGHUP, SIG_IGN);
     signal(SIGPIPE, SIG_IGN);
+
+#ifndef FUZZ
     setupSignalHandlers();
+#endif
 
     if (server.syslog_enabled) {
         openlog(server.syslog_ident, LOG_PID | LOG_NDELAY | LOG_NOWAIT,
@@ -2051,12 +2054,13 @@ void initServer(void) {
         }
         anetNonBlock(NULL,server.sofd);
     }
-
+#ifndef FUZZ
     /* Abort if there are no listening sockets at all. */
     if (server.ipfd_count == 0 && server.sofd < 0) {
         serverLog(LL_WARNING, "Configured to not listen anywhere, exiting.");
         exit(1);
     }
+#endif
 
     /* Create the Redis databases, and initialize other internal state. */
     for (j = 0; j < server.dbnum; j++) {
@@ -3976,7 +3980,33 @@ int redisIsSupervised(int mode) {
     return 0;
 }
 
+#ifdef FUZZ
+static bool AlreadyInit = false;
+static int loops = 0;
+static client* c = NULL;
 
+void Init() {
+  if (!AlreadyInit) {
+    initServerConfig();
+    server.port = 0;
+    server.unixsocket = NULL;
+    initServer();
+    c = createClient(-1);
+    AlreadyInit = true;
+  }
+}
+
+int LLVMFuzzerTestOneInput(const char *Data, size_t Size) {
+  Init();
+
+  sdscpylen(c->querybuf, Data, Size);
+  processInputBuffer(c);
+  sdsfree(c->querybuf);
+  c->querybuf = sdsempty();
+
+  return 0;
+}
+#else
 int main(int argc, char **argv) {
     struct timeval tv;
     int j;
@@ -4173,5 +4203,6 @@ int main(int argc, char **argv) {
     aeDeleteEventLoop(server.el);
     return 0;
 }
+#endif
 
 /* The End */
