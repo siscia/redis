@@ -4005,7 +4005,7 @@ int redisIsSupervised(int mode) {
 
 #ifdef FUZZ
 static bool AlreadyInit = false;
-static int loops = 0;
+static client* c = NULL;
 
 void Init() {
   if (!AlreadyInit) {
@@ -4013,6 +4013,7 @@ void Init() {
     server.port = 0;
     server.unixsocket = NULL;
     initServer();
+    c = createClient(-1);
     AlreadyInit = true;
   }
 }
@@ -4020,27 +4021,12 @@ void Init() {
 int LLVMFuzzerTestOneInput(const char *Data, size_t Size) {
   Init();
 
-  for(size_t i = 0; i <= Size; i++) {
-    if (!( isascii(Data[i]) || isspace(Data[i]) ))
-      return 0;
-  }
-
-  /*
-  //printf("Data :> %s\n", Data);
-  printf("Loop: %d\nData: %s\n", ++loops, Data);
-  int n = 0;
-  sds* arr = sdssplitargs(Data, &n);
-  //printf("Len:> %d\n", n);
-  for (int i = 0; i < n; i++)
-    printf("Array Len:> %zu\n", sdslen(arr[i]));
-  sdsfreesplitres(arr, n);
-        */
-  client* c = createClient(-1);
   sdscpylen(c->querybuf, Data, Size);
   processInputBuffer(c);
-  freeClient(c);
+  sdsfree(c->querybuf);
+  c->querybuf = sdsempty();
 
-  return 0;  // Non-zero return values are reserved for future use.
+  return 0;
 }
 #else
 int main(int argc, char **argv) {

@@ -301,10 +301,10 @@ helgrind:
 	$(MAKE) OPTIMIZATION="-O0" MALLOC="libc" CFLAGS="-D__ATOMIC_VAR_FORCE_SYNC_MACROS"
 
 %.o.fuzz: %.c .make-prerequisites
-	clang-6.0 -O0 -DFUZZ -fsanitize=fuzzer-no-link -fsanitize-coverage=edge $(FINAL_CFLAGS) -O0 -c $< -o $@
+	clang-6.0 -O0 -DFUZZ -fsanitize=fuzzer-no-link -fsanitize-coverage=edge -fprofile-instr-generate -fcoverage-mapping $(FINAL_CFLAGS) -O0 -c $< -o $@
 
 fuzz: $(addsuffix .fuzz, $(REDIS_SERVER_OBJ))
-	clang-6.0 -fsanitize=fuzzer -fsanitize-coverage=edge $(FINAL_LDFLAGS) -o fuzz $^ ../deps/hiredis/libhiredis.a ../deps/lua/src/liblua.a $(FINAL_LIBS)
+	clang-6.0 -fsanitize=fuzzer -fsanitize-coverage=edge -fprofile-instr-generate -fcoverage-mapping $(FINAL_LDFLAGS) -o fuzz $^ ../deps/hiredis/libhiredis.a ../deps/lua/src/liblua.a $(FINAL_LIBS)
 
 src/help.h:
 	@../utils/generate-command-help.rb > help.h
